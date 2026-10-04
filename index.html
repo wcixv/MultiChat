@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MultiChat: type once, chat on Twitch, Kick and YouTube</title>
+<meta name="description" content="MultiChat is a Windows app that sends your message to Twitch, Kick and YouTube chat at the same time.">
+<meta name="theme-color" content="#241F66">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cdefs%3E%3CclipPath id='r'%3E%3Crect x='1' y='1' width='46' height='46' rx='12'/%3E%3C/clipPath%3E%3Cmask id='h'%3E%3Crect width='48' height='48' fill='white'/%3E%3Crect x='12' y='12.5' width='24' height='22' rx='3' fill='black'/%3E%3C/mask%3E%3C/defs%3E%3Cg clip-path='url(%23r)' mask='url(%23h)'%3E%3Crect width='48' height='48' fill='%230A9CFF'/%3E%3Crect x='35' width='13' height='48' fill='%230062B1'/%3E%3C/g%3E%3C/svg%3E">
+
+<!--
+  TO MAKE THE DOWNLOAD BUTTONS WORK
+  Change the REPO line near the bottom of this file (inside <script>) to your GitHub
+  "name/repository", for example  "bobby/multichat". Everything else updates itself.
+-->
+
+<style>
+  :root {
+    --chalk: #F4F3FB;
+    --ink: #181536;
+    --ink-soft: #3B3868;
+    --indigo: #241F66;
+    --indigo-deep: #14114A;
+    --violet: #5B3DF5;
+    --marigold: #FFC93C;
+    --mist: #D9D6F2;
+    --twitch: #9146FF;
+    --kick: #53FC18;
+    --youtube: #FF4343;
+    --display: ui-rounded, "SF Pro Rounded", "Arial Rounded MT Bold", "Nunito", "Trebuchet MS", system-ui, sans-serif;
+    --body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --mono: ui-monospace, "Cascadia Code", "SF Mono", Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--chalk); color: var(--ink); font: 17px/1.6 var(--body); -webkit-font-smoothing: antialiased; }
+  a { color: var(--violet); text-underline-offset: 3px; }
+  :focus-visible { outline: 3px solid var(--violet); outline-offset: 3px; border-radius: 6px; }
+  .on-dark :focus-visible { outline-color: var(--marigold); }
+  .wrap { width: min(1120px, 100% - 48px); margin-inline: auto; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  h1, h2, h3 { font-family: var(--display); font-weight: 800; letter-spacing: -0.02em; margin: 0; }
+
+  /* ---------- hero ---------- */
+  .hero { background: var(--indigo); color: #fff; padding-bottom: 88px; }
+  .on-dark a { color: #fff; }
+  header.top { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 22px 0 0; }
+  .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; font: 800 1.35rem var(--display); letter-spacing: -0.01em; }
+  .brand svg { width: 38px; height: 38px; display: block; }
+  nav.top { display: flex; align-items: center; gap: 26px; font-size: 0.97rem; }
+  nav.top a { text-decoration: none; opacity: .86; }
+  nav.top a:hover { opacity: 1; text-decoration: underline; }
+  .btn { display: inline-block; text-decoration: none; font: 800 1.08rem var(--display); border-radius: 14px; padding: 16px 28px; cursor: pointer; border: 0; }
+  .btn-go { background: var(--marigold); color: var(--ink) !important; }
+  .btn-go:hover { background: #FFD65F; }
+  .btn-small { padding: 9px 16px; font-size: .93rem; border-radius: 11px; }
+  .hero-grid { display: grid; grid-template-columns: minmax(0, 1.02fr) minmax(0, 1fr); gap: 64px; align-items: center; padding-top: 72px; }
+  .hero h1 { font-size: clamp(2.4rem, 4.6vw, 3.6rem); line-height: 1.06; text-wrap: balance; }
+  .hero h1 span { display: block; }
+  .hero .lede { font-size: 1.28rem; line-height: 1.5; max-width: 30ch; margin: 24px 0 34px; color: #E3E0FF; }
+  .cta-row { display: flex; flex-wrap: wrap; align-items: center; gap: 22px; }
+  .cta-row .how { color: #fff; font-weight: 600; }
+  .fine { margin: 18px 0 0; font-size: .93rem; color: #BDB8EE; max-width: 46ch; }
+
+  /* ---------- the demo ---------- */
+  .demo { background: #1D1960; border: 1px solid rgba(255,255,255,.14); border-radius: 22px; padding: 22px; box-shadow: 0 30px 60px -30px rgba(8,6,40,.9); }
+  .demo form { display: flex; gap: 10px; }
+  .demo input[type=text] { flex: 1; min-width: 0; background: var(--indigo-deep); border: 1px solid rgba(255,255,255,.18); color: #fff; border-radius: 12px; padding: 13px 16px; font: 16px var(--body); }
+  .demo input[type=text]::placeholder { color: #9A95D9; }
+  .demo input[type=text]:focus-visible { outline: 3px solid var(--marigold); outline-offset: 2px; }
+  .demo .send { background: var(--violet); color: #fff; border: 0; border-radius: 12px; padding: 0 22px; font: 800 1rem var(--display); cursor: pointer; }
+  .demo .send:hover { background: #6D52FF; }
+  .toggle { display: flex; align-items: center; gap: 12px; margin: 16px 2px 18px; font-size: .95rem; color: #CFCBF5; cursor: pointer; }
+  .toggle input { position: absolute; opacity: 0; }
+  .toggle .track { flex: none; width: 42px; height: 24px; background: #4A4496; border-radius: 12px; position: relative; transition: background .15s; }
+  .toggle .track::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: transform .15s; }
+  .toggle input:checked + .track { background: #FF5F7A; }
+  .toggle input:checked + .track::after { transform: translateX(18px); }
+  .toggle input:focus-visible + .track { outline: 3px solid var(--marigold); outline-offset: 3px; }
+  .panes { display: grid; gap: 10px; }
+  .pane { background: var(--indigo-deep); border-radius: 14px; padding: 12px 14px 10px; border-left: 4px solid var(--c); }
+  .pane header { display: flex; justify-content: space-between; align-items: center; font: 800 .95rem var(--display); }
+  .pane header span:first-child { color: var(--c); }
+  .state { font: 600 .8rem var(--body); color: #BDB8EE; display: inline-flex; align-items: center; gap: 6px; }
+  .state::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: #3DDC84; }
+  .state.off::before { background: #6C8CFF; }
+  .pane ul { overflow-wrap: anywhere; list-style: none; margin: 8px 0 0; padding: 0; font: 13px/1.55 var(--mono); color: #D8D5F6; min-height: 62px; }
+  .pane li b { color: #8F89DB; font-weight: 600; }
+  .pane li.me b { color: #fff; }
+  .pane li.me::after { content: "  sent"; color: #3DDC84; font-size: 12px; }
+  .pane li.skip { color: #8F89DB; font-style: italic; }
+  .demo .note { margin: 14px 2px 0; font-size: .85rem; color: #A7A2E2; }
+
+  /* ---------- sections on chalk ---------- */
+  section.block { padding: 96px 0 0; }
+  section.block h2 { font-size: clamp(1.9rem, 3.6vw, 2.7rem); line-height: 1.1; max-width: 18ch; }
+  dl.features { margin: 40px 0 0; }
+  .feat { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 12px 56px; padding: 26px 0; }
+  .feat dt { font: 800 1.55rem/1.2 var(--display); letter-spacing: -0.015em; }
+  .feat dd { margin: 0; color: var(--ink-soft); max-width: 60ch; }
+  ol.steps { list-style: none; counter-reset: s; padding: 0; margin: 40px 0 0; display: grid; gap: 34px; max-width: 760px; }
+  ol.steps li { counter-increment: s; display: grid; grid-template-columns: 64px 1fr; gap: 6px 20px; }
+  ol.steps li::before { content: counter(s); grid-row: span 2; font: 800 3.4rem/1 var(--display); color: var(--violet); }
+  ol.steps h3 { font-size: 1.35rem; line-height: 1.25; }
+  ol.steps p { margin: 0; color: var(--ink-soft); }
+  .faq { margin-top: 36px; max-width: 800px; }
+  details { border-bottom: 1px solid var(--mist); }
+  details:first-child { border-top: 1px solid var(--mist); }
+  summary { cursor: pointer; list-style: none; padding: 20px 40px 20px 0; font: 700 1.12rem var(--display); position: relative; }
+  summary::-webkit-details-marker { display: none; }
+  summary::after { content: "+"; position: absolute; right: 6px; top: 16px; font: 400 1.7rem/1 var(--body); color: var(--violet); transition: transform .15s; }
+  details[open] summary::after { transform: rotate(45deg); }
+  details p { margin: 0 0 20px; color: var(--ink-soft); max-width: 66ch; }
+
+  /* ---------- footer ---------- */
+  footer { background: var(--indigo); color: #fff; margin-top: 110px; padding: 64px 0 48px; }
+  footer .row { display: flex; flex-wrap: wrap; gap: 28px; justify-content: space-between; align-items: center; }
+  footer h2 { font-size: clamp(1.6rem, 3vw, 2.2rem); }
+  footer .legal { margin: 44px 0 0; font-size: .86rem; color: #B5B0EA; max-width: 78ch; }
+  footer .legal a { color: #fff; }
+
+  @media (max-width: 860px) {
+    .hero-grid { grid-template-columns: minmax(0, 1fr); gap: 44px; padding-top: 48px; }
+    .hero .lede { max-width: 36ch; }
+    nav.top a.hide-s { display: none; }
+    .feat { grid-template-columns: 1fr; padding: 20px 0; }
+    section.block { padding-top: 72px; }
+  }
+  @media (max-width: 520px) {
+    ol.steps li { grid-template-columns: 44px 1fr; }
+    ol.steps li::before { font-size: 2.6rem; }
+    .demo { padding: 16px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    * { transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="hero on-dark">
+  <div class="wrap">
+    <header class="top">
+      <a class="brand" href="#top" aria-label="MultiChat home">
+        <svg viewBox="0 0 48 48" aria-hidden="true"><defs><clipPath id="r"><rect x="1" y="1" width="46" height="46" rx="12"/></clipPath><mask id="h"><rect width="48" height="48" fill="white"/><rect x="12" y="12.5" width="24" height="22" rx="3" fill="black"/></mask></defs><g clip-path="url(#r)" mask="url(#h)"><rect width="48" height="48" fill="#0A9CFF"/><rect x="35" width="13" height="48" fill="#0062B1"/></g></svg>
+        MultiChat
+      </a>
+      <nav class="top" aria-label="Main">
+        <a class="hide-s" href="#features">What it does</a>
+        <a class="hide-s" href="#setup">Set up</a>
+        <a class="hide-s" href="#faq">Questions</a>
+        <a class="btn btn-go btn-small" data-dl href="#">Download</a>
+      </nav>
+    </header>
+
+    <div class="hero-grid" id="top">
+      <div>
+        <h1><span>Type once.</span> <span>Chat everywhere.</span></h1>
+        <p class="lede">MultiChat is a Windows app that sends your message to Twitch, Kick and YouTube chat at the same time.</p>
+        <div class="cta-row">
+          <a class="btn btn-go" data-dl href="#">Download for Windows</a>
+          <a class="how" href="#setup">How to set it up</a>
+        </div>
+        <p class="fine">Version <span data-version>1.0</span>. Works on Windows 10 and 11. Your logins stay on your PC.</p>
+      </div>
+
+      <div class="demo" aria-label="Try MultiChat">
+        <form id="demo-form" autocomplete="off">
+          <label class="sr" for="demo-text">Your message</label>
+          <input id="demo-text" type="text" maxlength="200" placeholder="Type a message and press Enter">
+          <button class="send" type="submit">Send</button>
+        </form>
+        <label class="toggle">
+          <input id="live-only" type="checkbox" checked>
+          <span class="track"></span>
+          <span>Live only: skip chats where the streamer is offline</span>
+        </label>
+        <div class="panes">
+          <div class="pane" style="--c: var(--twitch)">
+            <header><span>Twitch</span><span class="state">Live</span></header>
+            <ul id="p-twitch" role="log" aria-label="Twitch chat">
+              <li><b>mia_plays</b> that last jump was insane</li>
+              <li><b>bytebard</b> chat is moving fast tonight</li>
+            </ul>
+          </div>
+          <div class="pane" style="--c: var(--kick)">
+            <header><span>Kick</span><span class="state">Live</span></header>
+            <ul id="p-kick" role="log" aria-label="Kick chat">
+              <li><b>nova_k</b> first time catching a stream here</li>
+              <li><b>okapi</b> hi everyone</li>
+            </ul>
+          </div>
+          <div class="pane" style="--c: var(--youtube)">
+            <header><span>YouTube</span><span class="state off">Offline</span></header>
+            <ul id="p-youtube" role="log" aria-label="YouTube chat">
+              <li><b>Stream ended</b> nobody is streaming here right now</li>
+            </ul>
+          </div>
+        </div>
+        <p class="note">This is a demo. Nothing you type here is sent anywhere.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<main>
+  <section class="block" id="features">
+    <div class="wrap">
+      <h2>What MultiChat does</h2>
+      <dl class="features">
+        <div class="feat">
+          <dt>One box for every chat</dt>
+          <dd>Type your message once and it goes to Twitch, Kick and YouTube together. Switch off any platform you don't want to use for a message.</dd>
+        </div>
+        <div class="feat">
+          <dt>It follows the stream</dt>
+          <dd>See which platform the streamer is live on right now. With Live only on, MultiChat skips the chats where they're offline, and it keeps checking while you chat.</dd>
+        </div>
+        <div class="feat">
+          <dt>Your accounts, your choice</dt>
+          <dd>Log in extra accounts of your own and pick which one sends each message. Sending from all of them at once only works in a channel one of your accounts owns.</dd>
+        </div>
+        <div class="feat">
+          <dt>A marketplace of creators</dt>
+          <dd>Browse popular streamers with their Twitch pictures, add one in a click, or list someone yourself. Search by name or filter by platform.</dd>
+        </div>
+        <div class="feat">
+          <dt>Log in with your browser</dt>
+          <dd>Click a platform, approve in your browser, and you're done. MultiChat keeps your login fresh, so there are no tokens to copy and paste.</dd>
+        </div>
+        <div class="feat">
+          <dt>Everything stays on your PC</dt>
+          <dd>Your logins and settings are saved in a data folder next to the app. MultiChat has no server and sends nothing to us. It talks straight to Twitch, Kick and YouTube.</dd>
+        </div>
+      </dl>
+    </div>
+  </section>
+
+  <section class="block" id="setup">
+    <div class="wrap">
+      <h2>Set up in four steps</h2>
+      <ol class="steps">
+        <li>
+          <h3>Download and unzip</h3>
+          <p>Put <strong>MultiChat.exe</strong> in its own folder, for example <em>Documents\MultiChat</em>. The first time it runs, it creates a <em>data</em> folder next to itself.</p>
+        </li>
+        <li>
+          <h3>Open it</h3>
+          <p>Windows may say it protected your PC, because the app is new and not yet widely downloaded. Click <strong>More info</strong>, then <strong>Run anyway</strong>.</p>
+        </li>
+        <li>
+          <h3>Connect your platforms</h3>
+          <p>Open <strong>Accounts</strong>. Each platform needs a free developer app, once, and the Accounts window shows you what to fill in. Then click Twitch, Kick or YouTube to log in through your browser.</p>
+        </li>
+        <li>
+          <h3>Pick a creator and type</h3>
+          <p>Choose someone from the <strong>Marketplace</strong> or add a channel yourself, then type in the box at the bottom and press Enter.</p>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="block" id="faq">
+    <div class="wrap">
+      <h2>Questions</h2>
+      <div class="faq">
+        <details>
+          <summary>Why does Windows show a warning?</summary>
+          <p>Windows warns about apps it hasn't seen many times before, and MultiChat is new. Choose More info, then Run anyway. Some antivirus programs also flag brand-new apps by mistake. If yours does, you can check the file at virustotal.com before you run it.</p>
+        </details>
+        <details>
+          <summary>What does MultiChat store, and is it safe?</summary>
+          <p>Your logins and settings are saved in <em>data\config.json</em> on your PC. Treat that folder like a password and don't share it. MultiChat has no server of its own. You can take its access away at any time from each platform's connected-apps settings, for example Settings, then Connections on Twitch.</p>
+        </details>
+        <details>
+          <summary>Why do I have to create a developer app on each platform?</summary>
+          <p>Twitch, Kick and YouTube only let apps send chat messages on your behalf when the app is registered with them. Creating your own free app means the login goes from you directly to the platform, and nobody sits in the middle.</p>
+        </details>
+        <details>
+          <summary>Can it post from many accounts into any chat?</summary>
+          <p>No, and that's on purpose. You can switch between your own accounts and send one message at a time from the one you pick. Sending from all your accounts at once only works in a channel that one of your logged-in accounts owns. Posting the same message from many accounts into someone else's chat counts as spam on every platform, and it gets accounts banned.</p>
+        </details>
+        <details>
+          <summary>Does it work with TikTok or X?</summary>
+          <p>TikTok has no official way to post to LIVE chat, so MultiChat can copy your message for you to paste there yourself. X isn't included.</p>
+        </details>
+        <details>
+          <summary>YouTube says the streamer isn't live</summary>
+          <p>YouTube chat only works while a stream is running. MultiChat checks again every ten minutes while it's offline, or you can click Reconnect to check right away.</p>
+        </details>
+        <details>
+          <summary>Is there a Mac or Linux version?</summary>
+          <p>Not yet. MultiChat is Windows only for now.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="on-dark">
+  <div class="wrap">
+    <div class="row">
+      <h2>Ready to try it?</h2>
+      <a class="btn btn-go" data-dl href="#">Download for Windows</a>
+    </div>
+    <p class="legal">Version <span data-version>1.0</span>. MultiChat is an independent project. It isn't affiliated with or endorsed by Twitch, Kick, YouTube, Google or TikTok, and their names belong to their owners. Found a problem? <a data-issues href="#">Tell us here</a>.</p>
+  </div>
+</footer>
+
+<script>
+(function () {
+  // ----- the only lines you need to edit -----
+  var REPO = "wcixv/MultiChat";   // your GitHub "name/repository"
+  var VERSION = "1.0";
+  // -------------------------------------------
+
+  var base = "https://github.com/" + REPO;
+  document.querySelectorAll("[data-dl]").forEach(function (a) { a.href = base + "/releases/latest/download/MultiChat-Windows.zip"; });
+  document.querySelectorAll("[data-issues]").forEach(function (a) { a.href = base + "/issues"; });
+  document.querySelectorAll("[data-version]").forEach(function (s) { s.textContent = VERSION; });
+
+  // ----- the demo: one box, three chats -----
+  var form = document.getElementById("demo-form");
+  var input = document.getElementById("demo-text");
+  var liveOnly = document.getElementById("live-only");
+  var still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var panes = [
+    { id: "p-twitch", live: true },
+    { id: "p-kick", live: true },
+    { id: "p-youtube", live: false }
+  ];
+
+  function add(list, who, text, cls) {
+    var li = document.createElement("li");
+    if (cls) li.className = cls;
+    if (who) { var b = document.createElement("b"); b.textContent = who; li.appendChild(b); li.appendChild(document.createTextNode(" ")); }
+    li.appendChild(document.createTextNode(text));
+    list.appendChild(li);
+    while (list.children.length > 4) list.removeChild(list.firstChild);
+  }
+
+  form.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var text = input.value.trim().slice(0, 200);
+    if (!text) return;
+    input.value = "";
+    panes.forEach(function (p, i) {
+      setTimeout(function () {
+        var list = document.getElementById(p.id);
+        if (liveOnly.checked && !p.live) add(list, "", "skipped, offline", "skip");
+        else add(list, "you", text, "me");
+      }, still ? 0 : i * 140);
+    });
+  });
+})();
+</script>
+</body>
+</html>
