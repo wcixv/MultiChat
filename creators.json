@@ -1,0 +1,19 @@
+{
+  "title": "Top creators: most followed on Twitch, Oct 2026",
+  "updated": "2026-10-05",
+  "creators": [
+    {"name": "KreekCraft", "tag": "Roblox", "featured": true, "twitch": "kreekcraft", "kick": "kreek", "youtube": "kreekcraft"},
+    {"name": "Kai Cenat", "tag": "Just Chatting", "twitch": "kaicenat", "kick": "", "youtube": "kaicenat"},
+    {"name": "Ibai", "tag": "Spanish, events", "twitch": "ibai", "kick": "", "youtube": "ibai"},
+    {"name": "Ninja", "tag": "Fortnite", "twitch": "ninja", "kick": "", "youtube": "ninja"},
+    {"name": "AuronPlay", "tag": "Spanish, variety", "twitch": "auronplay", "kick": "", "youtube": "auronplay"},
+    {"name": "Rubius", "tag": "Spanish, variety", "twitch": "rubius", "kick": "", "youtube": "rubius"},
+    {"name": "xQc", "tag": "Variety", "twitch": "xqc", "kick": "xqc", "youtube": "xqcow"},
+    {"name": "TheGrefg", "tag": "Fortnite, Minecraft", "twitch": "thegrefg", "kick": "", "youtube": "thegrefg"},
+    {"name": "Tfue", "tag": "Fortnite", "twitch": "tfue", "kick": "", "youtube": "tfue"},
+    {"name": "Shroud", "tag": "FPS", "twitch": "shroud", "kick": "", "youtube": "shroud"},
+    {"name": "CaseOh", "tag": "Variety, Just Chatting", "twitch": "caseoh_", "kick": "", "youtube": ""},
+    {"name": "TommyInnit", "tag": "Minecraft", "twitch": "tommyinnit", "kick": "", "youtube": "tommyinnit"},
+    {"name": "Adin Ross", "tag": "Just Chatting", "twitch": "adinross", "kick": "adinross", "youtube": "adinross"}
+  ]
+}
