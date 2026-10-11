@@ -1,0 +1,19 @@
+{
+  "_how_to_use": "Copy your desktop app's data/config.json to config.json next to server.js, then add the 'server' block below to it. Do not share this file: it holds your logins.",
+  "server": {
+    "api_key": "PUT-A-LONG-RANDOM-STRING-HERE-AT-LEAST-16-CHARACTERS",
+    "port": 8080,
+    "watch": [],
+    "channels": [],
+    "live_only": true,
+    "time_sensitive": false,
+    "trust_proxy": true,
+    "apns": {
+      "team_id": "YOUR_10_CHAR_APPLE_TEAM_ID",
+      "key_id": "YOUR_10_CHAR_KEY_ID",
+      "bundle_id": "win.multichat.giveaway",
+      "key_file": "AuthKey.p8",
+      "sandbox": false
+    }
+  }
+}

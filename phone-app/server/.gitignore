@@ -1,0 +1,4 @@
+config.json
+AuthKey*.p8
+data/
+node_modules/

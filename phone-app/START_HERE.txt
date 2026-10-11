@@ -1,0 +1,162 @@
+MULTICHAT FOR iPHONE - START HERE
+=================================
+
+What this is
+------------
+Your iPhone gets a notification when a streamer announces a giveaway. You tap Enter on the
+notification (or open the app, check the word, and tap Enter) and MultiChat types the word into
+the chat for you. You do the tapping. It never enters by itself, and it only reads chat TEXT,
+never the video.
+
+How it fits together
+--------------------
+   Twitch chat --> [YOUR SERVER, always on] --> Apple push --> [YOUR iPHONE]
+                          ^                                         |
+                          +----------- you tap "Enter" -------------+
+                          (server types the word in Twitch / Kick / YouTube chat,
+                           from ONE account you pick, only where the streamer is live)
+
+The phone cannot watch chat on its own while it sleeps, which is why a small server is needed.
+
+What you need (the parts I cannot do for you)
+---------------------------------------------
+ 1. An Apple Developer account ($99/year, in your name, bought from Apple).
+ 2. A place to run the server 24/7 with an https address (a small cloud host, see Step 3).
+ 3. A way to BUILD an iPhone app. You are on Windows, so use the free GitHub "cloud Mac" in Step 4.
+ 4. Your accounts already logged in on the PC app (Accounts window), with your creators added.
+
+Status: the server is tested (19 automatic tests). The iPhone app source is written but could NOT
+be compiled or run on a phone in my workspace. Step 4 has a "compile" check that tells you
+straight away if Apple's compiler finds a mistake. If it does, send me the error text and I will fix it.
+
+======================================================================
+STEP 1 - Apple (about 20 minutes, all on developer.apple.com / appstoreconnect.apple.com)
+======================================================================
+ a) Join the Apple Developer Program and pay the fee.
+ b) Find your TEAM ID: developer.apple.com -> Account -> Membership details (10 letters/numbers).
+ c) Make the PUSH KEY:  Certificates, Identifiers & Profiles -> Keys -> "+"
+      Name: MultiChat push.  Tick "Apple Push Notifications service (APNs)".  Continue -> Register.
+      Click DOWNLOAD. You get AuthKey_XXXXXXXXXX.p8. Apple lets you download it ONCE. Keep it safe.
+      Write down its KEY ID (the 10 characters in the file name).
+ d) Make the APP ID:  Identifiers -> "+" -> App IDs -> App -> Continue
+      Description: MultiChat.  Bundle ID: choose "Explicit", type   win.multichat.giveaway
+      Under Capabilities tick "Push Notifications". Continue -> Register.
+ e) Make the APP RECORD (needed for TestFlight):  appstoreconnect.apple.com -> Apps -> "+" -> New App
+      Platform iOS. Name: anything Apple has not taken (for example "MultiChat Giveaways").
+      Bundle ID: win.multichat.giveaway.  SKU: anything.
+ f) Make the UPLOAD KEY (a different key from the push key):
+      appstoreconnect.apple.com -> Users and Access -> Integrations -> App Store Connect API
+      -> Team Keys -> "+". Name: GitHub build. Access: App Manager. Generate.
+      Download the .p8 (ONCE). Write down its KEY ID and the ISSUER ID shown above the key list.
+
+======================================================================
+STEP 2 - Make the server's settings file (on your PC, 1 minute)
+======================================================================
+Open Command Prompt in this folder's "tools" folder and run (change the paths and letters):
+
+   python make_server_config.py "C:\path\to\MultiChat\data\config.json" AuthKey_PUSHKEYID.p8 --team-id YOURTEAMID --key-id PUSHKEYID
+
+It creates  server-config.json  and prints a SERVER KEY. Copy that key: you type it into the app.
+
+ * server-config.json contains your logins and your Apple key. Treat it like a password.
+   Never upload it to GitHub or send it to anyone. (The .gitignore here already blocks it.)
+ * Do NOT add --sandbox for the TestFlight route. Only add it if you install the app straight
+   from Xcode on a Mac, because those builds use Apple's test push servers.
+
+======================================================================
+STEP 3 - Run the server (always on, with https)
+======================================================================
+The server is in the "server" folder. It has no dependencies; it needs Node 20+ or Docker.
+
+Easiest: a host that runs a Docker container and gives you an https address
+(for example Fly.io, Railway or Render, or your own small VPS).
+ * Deploy the "server" folder using its Dockerfile.
+ * Add a PERSISTENT VOLUME mounted at   /data   (the server saves refreshed logins there).
+ * Add a secret environment variable   CONFIG_JSON   containing the ENTIRE text of server-config.json.
+   On the first start the server turns it into /data/config.json and uses that file from then on.
+ * Make sure the host exposes port 8080 over https.
+Your own VPS instead:
+   docker build -t multichat-phone .
+   docker run -d --restart always -p 8080:8080 -v multichat-data:/data -e CONFIG_JSON="$(cat server-config.json)" multichat-phone
+   (then put https in front of it, for example with Caddy or a Cloudflare Tunnel)
+
+Check it: open  https://YOUR-ADDRESS/health  in a browser. You should see  {"ok":true,"watching":N}
+where N is the number of Twitch channels it is watching (your creators with a Twitch name).
+
+======================================================================
+STEP 4 - Build the iPhone app (no Mac needed)
+======================================================================
+ 1. Put the whole "phone-app" folder at the top level of your GitHub repository
+    (the repository from before, or a new PRIVATE one - a private repository is the safer choice).
+ 2. Put the file  github-workflow/ios-build.yml  into the repository as  .github/workflows/ios-build.yml
+ 3. On GitHub: Settings -> Secrets and variables -> Actions -> New repository secret. Add four:
+       ASC_KEY_ID      the KEY ID of the UPLOAD key (Step 1f)
+       ASC_ISSUER_ID   the ISSUER ID (Step 1f)
+       ASC_KEY_P8      open the upload key's .p8 in Notepad and paste ALL of its text
+       APPLE_TEAM_ID   your Team ID (Step 1b)
+ 4. Open the Actions tab. The "compile" job runs by itself when you upload. Wait for a green tick.
+    If it is red, copy the red error lines and send them to me.
+ 5. Actions -> "iPhone app" -> Run workflow (leave "Upload to TestFlight" ticked). This signs the app
+    with your Apple account and uploads it. The first run is the most likely to need a small fix;
+    send me the error text if it stops.
+
+   If you have a Mac instead: install XcodeGen (brew install xcodegen), run  xcodegen generate  in
+   phone-app/ios, open MultiChat.xcodeproj, pick your Team under Signing, plug in your iPhone, press Run.
+
+======================================================================
+STEP 5 - Put it on your iPhone
+======================================================================
+ 1. On the iPhone install the free "TestFlight" app from the App Store.
+ 2. appstoreconnect.apple.com -> your app -> TestFlight. Wait until the build says it is ready
+    (10-30 minutes). If it asks about "export compliance", answer that the app uses no
+    non-exempt encryption.
+ 3. Add yourself as an INTERNAL tester (Users and Access -> make sure your Apple ID is listed, then
+    TestFlight -> Internal Testing -> "+" a group -> add yourself and the build).
+ 4. Open TestFlight on the iPhone, accept the invite and tap Install.
+ TestFlight builds last 90 days; run the workflow again to refresh one.
+
+======================================================================
+STEP 6 - Connect the app
+======================================================================
+ 1. Open MultiChat on the iPhone -> Settings.
+ 2. Server address: your https address from Step 3. Server key: the key from Step 2.
+ 3. Tap "Save and connect". It should say it is connected and how many channels are watched.
+ 4. Tap "Allow notifications" and press Allow.
+ 5. Tap "Send a test notification". A "Test giveaway" alert should arrive in a few seconds.
+    Pull it down (or long-press) and you will see the Enter button. In a test it sends NOTHING.
+
+======================================================================
+HOW IT BEHAVES
+======================================================================
+ * Alerts come from the streamer, their mods or a giveaway bot saying "type !word to enter", and
+   when 3+ different viewers type the same !word within 30 seconds ("Maybe a giveaway").
+ * If the word is only on the stream, you still get an alert, with a box to type the word you see.
+ * Enter uses ONE account (pick it in the app; the notification button uses the default account
+   from Settings). It types the word on every platform where the creator has a channel, the streamer is
+   live, and that account is logged in. It cannot send from several accounts at once.
+ * Double taps never enter twice: the server remembers what was entered (6 hours).
+ * The notification's Enter button asks you to unlock the phone first.
+ * The server only ever types a word when you tap Enter.
+
+SAFETY
+------
+ * The server key is the only lock on your server. Use the long one the helper made.
+   10 wrong guesses lock an address out for 10 minutes.
+ * server-config.json holds your logins: keep it private, private repository only if you store it at all.
+ * Always follow each streamer's giveaway rules.
+
+LIMITS
+------
+ * It watches Twitch chat only (like the PC alert). Kick/YouTube are entered, not watched.
+ * YouTube checks use part of Google's daily allowance (about 100 units each time you enter).
+ * Twitch sometimes refuses a message (for example followers-only chat). The app shows Twitch's
+   reason next to Twitch instead of "Entered".
+
+IF SOMETHING GOES WRONG
+-----------------------
+ No notification at all   -> Settings in the app says what is missing. Check the server's /health.
+                             TestFlight builds need "sandbox" OFF (no --sandbox) on the server.
+ "Wrong key."             -> The key in the app is not the one the helper printed.
+ "Could not reach server" -> The address must start with https and the server must be running.
+ Alert arrives, Enter fails -> the app shows each platform's reason (not logged in, offline, dropped).
+ Everything here is in the "server" folder (server.js is the heart) and "ios" folder (the app).

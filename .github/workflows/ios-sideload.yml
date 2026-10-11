@@ -1,0 +1,37 @@
+# Builds an UNSIGNED MultiChat.ipa on a cloud Mac, for sideloading with Sideloadly or AltStore.
+# Put this file at  .github/workflows/ios-sideload.yml  in your GitHub repository.
+# Run it: Actions tab -> "iPhone app (sideload .ipa)" -> Run workflow. When it finishes, open the run
+# and download the "MultiChat-ipa" file at the bottom. No Apple secrets are needed here: Sideloadly signs it
+# on your PC with your own Apple ID.
+name: iPhone app (sideload .ipa)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  ipa:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate the Xcode project
+        working-directory: phone-app/ios
+        run: xcodegen generate
+      - name: Build without signing
+        working-directory: phone-app/ios
+        run: |
+          xcodebuild -project MultiChat.xcodeproj -scheme MultiChat \
+            -configuration Release -destination 'generic/platform=iOS' \
+            -derivedDataPath "$RUNNER_TEMP/dd" \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build | tail -n 30
+      - name: Package the .ipa
+        run: |
+          mkdir -p "$RUNNER_TEMP/Payload"
+          cp -R "$RUNNER_TEMP/dd/Build/Products/Release-iphoneos/MultiChat.app" "$RUNNER_TEMP/Payload/"
+          cd "$RUNNER_TEMP" && zip -qry MultiChat.ipa Payload
+          mv MultiChat.ipa "$GITHUB_WORKSPACE/MultiChat.ipa"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MultiChat-ipa
+          path: MultiChat.ipa

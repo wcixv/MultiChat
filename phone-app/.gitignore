@@ -1,0 +1,8 @@
+# Never upload these: they hold your logins and Apple keys
+server-config.json
+config.json
+*.p8
+*.pem
+data/
+node_modules/
+*.xcodeproj

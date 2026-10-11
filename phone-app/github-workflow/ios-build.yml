@@ -1,0 +1,90 @@
+# Builds the iPhone app on a cloud Mac, so you do not need to own one.
+# Put this file at  .github/workflows/ios-build.yml  in your GitHub repository
+# (the repository must also contain the phone-app folder at its top level).
+#
+#  * "compile" runs on every push to phone-app/ios and checks that the app builds. No secrets needed.
+#  * "testflight" runs only when you start it by hand (Actions tab -> Run workflow). It signs the app with
+#    your Apple account and uploads it to TestFlight, which is how you install it on your iPhone.
+#    It needs four secrets (Settings -> Secrets and variables -> Actions):
+#       ASC_KEY_ID      App Store Connect API key ID
+#       ASC_ISSUER_ID   the Issuer ID shown above the key list
+#       ASC_KEY_P8      the full text of the downloaded AuthKey_XXXX.p8 file
+#       APPLE_TEAM_ID   your 10-character Team ID
+name: iPhone app
+
+on:
+  push:
+    paths: ["phone-app/ios/**", ".github/workflows/ios-build.yml"]
+  workflow_dispatch:
+    inputs:
+      upload:
+        description: "Upload to TestFlight?"
+        type: boolean
+        default: true
+
+jobs:
+  compile:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate the Xcode project
+        working-directory: phone-app/ios
+        run: xcodegen generate
+      - name: Build for the simulator (no signing)
+        working-directory: phone-app/ios
+        run: |
+          xcodebuild -project MultiChat.xcodeproj -scheme MultiChat \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO build | tail -n 40
+
+  testflight:
+    if: github.event_name == 'workflow_dispatch' && inputs.upload
+    needs: compile
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate the Xcode project
+        working-directory: phone-app/ios
+        run: xcodegen generate
+      - name: Save the App Store Connect key
+        env:
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/keys"
+          printf '%s' "$ASC_KEY_P8" > "$RUNNER_TEMP/keys/AuthKey.p8"
+      - name: Archive (signed automatically by Apple's cloud signing)
+        working-directory: phone-app/ios
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          xcodebuild archive -project MultiChat.xcodeproj -scheme MultiChat \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/MultiChat.xcarchive" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/keys/AuthKey.p8" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
+            CURRENT_PROJECT_VERSION="${{ github.run_number }}" | tail -n 40
+      - name: Export and upload to TestFlight
+        working-directory: phone-app/ios
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          sed -i '' "s/REPLACE_WITH_TEAM_ID/$APPLE_TEAM_ID/" ExportOptions.plist
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/MultiChat.xcarchive" \
+            -exportOptionsPlist ExportOptions.plist \
+            -exportPath "$RUNNER_TEMP/export" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/keys/AuthKey.p8" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID" | tail -n 40

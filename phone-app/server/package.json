@@ -1,0 +1,9 @@
+{
+  "name": "multichat-phone-server",
+  "version": "1.0.0",
+  "description": "Watches Twitch chat for giveaways and pushes an alert to your iPhone. You tap Enter; it never enters by itself.",
+  "type": "module",
+  "private": true,
+  "engines": { "node": ">=20" },
+  "scripts": { "start": "node server.js", "test": "node --test test/*.test.js" }
+}
