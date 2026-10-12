@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { ConfigStore, Platforms, PLATFORMS, LABEL } from './platforms.js';
 import { Watcher } from './giveaway.js';
 import { Apns } from './apns.js';
+import { Telegram } from './telegram.js';
 
 const digest = (s) => crypto.createHash('sha256').update(String(s)).digest();
 const safeEqual = (a, b) => crypto.timingSafeEqual(digest(a), digest(b));
@@ -28,6 +29,7 @@ export function createApp({ store, platforms, apns = null, dataDir, log = consol
   const inflight = new Set();
   const cfg = () => store.data;
   const srv = () => cfg().server || {};
+  let telegram = null;                             // set by main() or tests via attachTelegram
 
   // ---------- creators ----------
   const creators = () => Object.entries(cfg().creators || {}).map(([name, v]) => ({
@@ -73,6 +75,7 @@ export function createApp({ store, platforms, apns = null, dataDir, log = consol
     hits.length = Math.min(hits.length, 50);
     log(`giveaway: ${rec.creator} ${rec.command || '(word on stream)'}${rec.crowd ? ' [crowd]' : ''}`);
     await notify(rec);
+    if (telegram) await telegram.notify(rec);
     return rec;
   }
 
@@ -156,7 +159,7 @@ export function createApp({ store, platforms, apns = null, dataDir, log = consol
       if (req.method === 'POST' && url.pathname === '/enter') { const [code, out] = await enter(await readBody(req)); return reply(res, code, out); }
       if (req.method === 'POST' && url.pathname === '/test-push') {
         const rec = await handleHit({ channel: watchChannels()[0] || 'test', command: '!test', text: 'This is a test giveaway', user: 'server', test: true });
-        return reply(res, 200, { hit: rec, devices: devices.length, pushConfigured: !!apns });
+        return reply(res, 200, { hit: rec, devices: devices.length, pushConfigured: !!apns, telegramLinked: !!telegram?.linked });
       }
       return reply(res, 404, { error: 'Not found.' });
     } catch (e) {
@@ -164,7 +167,9 @@ export function createApp({ store, platforms, apns = null, dataDir, log = consol
     }
   });
 
-  return { server, handleHit, enter, notify, watchChannels, creators, hits, get devices() { return devices; } };
+  const attachTelegram = (t) => { telegram = t; };
+  const findHit = (id) => hits.find((h) => h.id === id);
+  return { server, handleHit, enter, notify, watchChannels, creators, hits, findHit, attachTelegram, get devices() { return devices; } };
 }
 
 // ---------- start-up ----------
@@ -186,12 +191,24 @@ function main() {
     apns = new Apns({ teamId: s.apns.team_id, keyId: s.apns.key_id, bundleId: s.apns.bundle_id, keyPem, sandbox: !!s.apns.sandbox });
   } else console.warn('No server.apns settings: giveaways will be detected but no notifications can be sent.');
   const app = createApp({ store, platforms: new Platforms(store), apns, dataDir: process.env.DATA_DIR || path.join(here, 'data') });
+  const tgToken = process.env.TELEGRAM_BOT_TOKEN || s.telegram?.bot_token;
+  let telegram = null;
+  if (tgToken) {
+    const dataDir = process.env.DATA_DIR || path.join(here, 'data');
+    telegram = new Telegram({ token: tgToken, apiKey: s.api_key, dataDir, account: s.telegram?.account || null,
+      enter: (b) => app.enter(b), findHit: (id) => app.findHit(id), accounts: () => new Platforms(store).accounts(),
+      onTest: () => app.handleHit({ channel: app.watchChannels()[0] || 'test', command: '!test', text: 'This is a test giveaway', user: 'server', test: true }),
+      log: (m) => console.log(m) });
+    app.attachTelegram(telegram);
+    telegram.start();
+    console.log(`Telegram alerts on (${telegram.linked ? 'chat linked' : 'waiting for /start in Telegram'}).`);
+  } else console.log('Telegram alerts off (no TELEGRAM_BOT_TOKEN).');
   const channels = app.watchChannels();
   const watcher = new Watcher({ channels, onHit: (h) => app.handleHit(h).catch((e) => console.error('hit failed:', e.message)), onStatus: (t) => console.log('watcher:', t) });
   if (channels.length) watcher.start(); else console.warn('No Twitch channels to watch. Add creators to config.json or server.channels.');
   const port = Number(process.env.PORT || s.port || 8080);
   app.server.listen(port, () => console.log(`MultiChat phone server on port ${port}, watching: ${channels.join(', ') || '(nothing)'}`));
-  const stop = () => { watcher.stop(); apns?.close(); app.server.close(() => process.exit(0)); setTimeout(() => process.exit(0), 3000).unref(); };
+  const stop = () => { watcher.stop(); telegram?.stop(); apns?.close(); app.server.close(() => process.exit(0)); setTimeout(() => process.exit(0), 3000).unref(); };
   process.on('SIGTERM', stop); process.on('SIGINT', stop);
 }
 // Start only when run directly (node server.js), not when the tests import it. Compare real paths so a

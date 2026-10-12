@@ -160,3 +160,18 @@ IF SOMETHING GOES WRONG
  "Could not reach server" -> The address must start with https and the server must be running.
  Alert arrives, Enter fails -> the app shows each platform's reason (not logged in, offline, dropped).
  Everything here is in the "server" folder (server.js is the heart) and "ios" folder (the app).
+
+
+======================================================================
+TELEGRAM ALERTS (works with a free Apple ID, no iPhone app needed)
+======================================================================
+ 1. In Telegram, message @BotFather, send /newbot, pick a name and a username. It gives you a BOT TOKEN.
+ 2. On the server host (Railway: service -> Variables) add   TELEGRAM_BOT_TOKEN   = that token. Redeploy.
+ 3. Open your new bot in Telegram, press Start, then send:   /start YOUR-SERVER-KEY
+    (the key from make_server_config.py). It answers "Linked". Delete that message afterwards.
+ 4. Send /test. You get a test alert with an Enter button. Nothing is sent to any chat.
+ * When a giveaway shows in chat, you get a message with [Enter !word] and [Skip]. Tap Enter and the
+   server sends the word from ONE account on every platform where the streamer is live.
+ * If the word is only on the stream, reply to the alert with the word.
+ * To use an alt account instead of Main, add  "telegram": {"account": "Alt1"}  to the server block.
+ * Only the chat that linked with your key is answered. Anyone else is ignored.
